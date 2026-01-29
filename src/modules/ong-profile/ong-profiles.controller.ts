@@ -58,6 +58,16 @@ export class OngProfilesController {
   }
 
   /**
+   * Procura o perfil detalhado da ONG autenticada.
+   */
+  @Get('me/profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ong')
+  async findMyProfile(@CurrentUser() user: User) {
+    return this.ongProfilesService.findOne(Number(user.id));
+  }
+
+  /**
    * Procura o perfil detalhado de uma ONG pelo seu ID.
    */
   @Get(':ongId/profile')
