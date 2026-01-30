@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build && tsc prisma/seed.ts --outDir dist/prisma --esModuleInterop --resolveJsonModule",
+    "build": "nest build && tsc -p tsconfig.json prisma/seed.ts --outDir dist/prisma --esModuleInterop --resolveJsonModule --skipLibCheck",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
