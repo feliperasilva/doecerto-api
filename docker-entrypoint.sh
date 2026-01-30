@@ -5,7 +5,7 @@ set -e
 # 🎁 DoeCerto API - Docker Entrypoint Script
 # ===============================================
 
-# Cores para output (opcional, remove se não suportar)
+# Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -107,16 +107,20 @@ MAX_RETRIES=60
 RETRY_COUNT=0
 RETRY_DELAY=2
 
-until npx prisma db push --skip-generate 2>/dev/null; do
+# Verificar conexão com o banco usando Prisma
+until npx prisma db execute --stdin <<EOF 2>/dev/null
+SELECT 1;
+EOF
+do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     
     if [ $RETRY_COUNT -gt $MAX_RETRIES ]; then
-        log_error "Database connection failed after $MAX_RETRIES attempts (${RETRY_COUNT}s)"
-        log_error "Check DATABASE_URL: $DATABASE_URL"
+        log_error "Database connection failed after $MAX_RETRIES attempts ($(($MAX_RETRIES * $RETRY_DELAY))s)"
+        log_error "Check DATABASE_URL configuration"
         exit 1
     fi
     
-    ELAPSED=$((RETRY_COUNT * RETRY_DELAY))
+    ELAPSED=$(($RETRY_COUNT * $RETRY_DELAY))
     log_warning "Database unavailable - attempt $RETRY_COUNT/$MAX_RETRIES (${ELAPSED}s elapsed)"
     sleep $RETRY_DELAY
 done
@@ -129,24 +133,49 @@ log_success "Database connection successful"
 
 log_info "Running database migrations..."
 
-if ! npx prisma migrate deploy 2>&1; then
-    log_error "Migration failed!"
-    log_warning "Attempting to resolve migration..."
-    
-    # Tentar resolver conflitos de migration
-    if ! npx prisma migrate resolve --rolled-back 2>&1; then
-        log_error "Could not resolve migration conflict"
-        exit 1
-    fi
-    
-    log_info "Migration conflict resolved, retrying..."
-    if ! npx prisma migrate deploy 2>&1; then
-        log_error "Migration still failed after resolution"
-        exit 1
-    fi
-fi
+# Tentar executar migrations
+MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1) || MIGRATE_FAILED=1
 
-log_success "Database migrations completed"
+if [ ! -z "$MIGRATE_FAILED" ]; then
+    # Verificar se é erro P3005 (schema não vazio - precisa baseline)
+    if echo "$MIGRATE_OUTPUT" | grep -q "P3005"; then
+        log_warning "Database schema already exists, performing baseline..."
+        
+        # Listar migrations disponíveis
+        if [ -d "prisma/migrations" ]; then
+            MIGRATION_COUNT=0
+            
+            # Marcar cada migration como aplicada (baseline)
+            for migration_dir in prisma/migrations/*/; do
+                if [ -d "$migration_dir" ] && [ "$migration_dir" != "prisma/migrations/migration_lock.toml" ]; then
+                    migration_name=$(basename "$migration_dir")
+                    
+                    if [ "$migration_name" != "migration_lock.toml" ]; then
+                        log_info "Baseline: Marking as applied -> $migration_name"
+                        
+                        if npx prisma migrate resolve --applied "$migration_name" 2>&1; then
+                            MIGRATION_COUNT=$((MIGRATION_COUNT + 1))
+                        else
+                            log_warning "Failed to baseline: $migration_name (may already be applied)"
+                        fi
+                    fi
+                fi
+            done
+            
+            log_success "Baseline completed: $MIGRATION_COUNT migrations marked as applied"
+        else
+            log_error "No migrations directory found at prisma/migrations"
+            exit 1
+        fi
+    else
+        # Outro tipo de erro
+        log_error "Migration failed with unexpected error:"
+        echo "$MIGRATE_OUTPUT"
+        exit 1
+    fi
+else
+    log_success "Database migrations completed successfully"
+fi
 
 # ===============================================
 # 6️⃣ Seed do Banco (Opcional)
