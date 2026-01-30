@@ -31,6 +31,4 @@ uploads/profiles/*
 !uploads/profiles/.gitignore
 
 # Prisma
-prisma/migrations/
-!prisma/migrations/.gitkeep
 generated/
