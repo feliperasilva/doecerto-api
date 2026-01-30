@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build, Test and Push Docker Image
 
 on:
   push:
@@ -41,6 +41,13 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Run tests
+        run: |
+          docker build -t test-image .
+          docker run -d -p 3000:3000 --name test-container test-image
+          sleep 10
+          curl -f http://localhost:3000/ || exit 1
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
