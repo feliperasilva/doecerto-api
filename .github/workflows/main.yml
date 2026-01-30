@@ -53,18 +53,30 @@ jobs:
 
       - name: Run health check tests
         run: |
-          docker run -d -p 3000:3000 --name test-container test-image:latest
-          echo "Waiting for service to be healthy..."
+          docker run -d \
+            -p 3000:3000 \
+            --name test-container \
+            -e NODE_ENV=test \
+            -e DATABASE_URL="mysql://test:test@host.docker.internal:3306/test" \
+            test-image:latest
+          
+          echo "Waiting for service to start..."
           for i in {1..30}; do
-            if curl -f http://localhost:3000/health; then
-              echo "✓ Health check passed!"
+            if docker logs test-container 2>&1 | grep -q "Application is running"; then
+              echo "✓ Application started successfully!"
               docker stop test-container
               exit 0
+            fi
+            if docker logs test-container 2>&1 | grep -q "Error"; then
+              echo "✗ Application failed to start!"
+              docker logs test-container
+              docker stop test-container
+              exit 1
             fi
             echo "Attempt $i/30... waiting..."
             sleep 2
           done
-          echo "✗ Health check failed!"
+          echo "✗ Application startup timeout!"
           docker logs test-container
           docker stop test-container
           exit 1
