@@ -41,6 +41,7 @@ model Donor {
   updatedAt DateTime   @updatedAt
 
   profile   DonorProfile?
+  address   Address?
   donations Donation[]
   ratings   Rating[]
 
@@ -52,7 +53,6 @@ model DonorProfile {
   bio           String?  @db.VarChar(500)
   avatarUrl     String?  @db.VarChar(255)
   contactNumber String?  @db.VarChar(20)
-  address       String?  @db.VarChar(255)
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -81,6 +81,7 @@ model Ong {
 
   // Relações
   profile            OngProfile?
+  address            Address?
   ratings            Rating[]
   donations          Donation[]
   wishlistItems      WishlistItem[]
@@ -96,7 +97,6 @@ model OngProfile {
   avatarUrl     String?  @db.VarChar(255)
   contactNumber String?  @db.VarChar(20)
   websiteUrl    String?  @db.VarChar(255)
-  address       String?  @db.VarChar(255)
   categories    Category[]
 
   
@@ -117,6 +117,29 @@ model Admin {
   verificationsPerformed Ong[] @relation("OngVerifications")
 
   @@map("admins")
+}
+
+model Address {
+  id           Int      @id @default(autoincrement())
+  street       String   @db.VarChar(255)
+  number       String   @db.VarChar(20)
+  complement   String?  @db.VarChar(255)
+  neighborhood String   @db.VarChar(100)
+  city         String   @db.VarChar(100)
+  state        String   @db.VarChar(2)
+  zipCode      String   @db.VarChar(10)
+  country      String   @default("Brasil") @db.VarChar(100)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  donorId      Int?     @unique
+  ongId        Int?     @unique
+  
+  donor        Donor?   @relation(fields: [donorId], references: [userId], onDelete: Cascade)
+  ong          Ong?     @relation(fields: [ongId], references: [userId], onDelete: Cascade)
+
+  @@map("addresses")
 }
 
 enum VerificationStatus {
