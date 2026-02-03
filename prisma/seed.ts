@@ -18,8 +18,10 @@ async function main() {
   await prisma.rating.deleteMany();
   await prisma.wishlistItem.deleteMany();
   await prisma.donation.deleteMany();
+  await prisma.address.deleteMany();
   await prisma.ongProfile.deleteMany();
   await prisma.category.deleteMany();
+  await prisma.donorProfile.deleteMany();
   await prisma.donor.deleteMany();
   await prisma.ong.deleteMany();
   await prisma.admin.deleteMany();
