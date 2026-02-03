@@ -129,6 +129,8 @@ model Address {
   state        String   @db.VarChar(2)
   zipCode      String   @db.VarChar(10)
   country      String   @default("Brasil") @db.VarChar(100)
+  latitude     Float?
+  longitude    Float?
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
