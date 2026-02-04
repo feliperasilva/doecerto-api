@@ -4,7 +4,7 @@ interface NominatimResponse {
   lon: string;
 }
 
-interface GeocodeResult {
+export interface GeocodeResult {
   latitude: number;
   longitude: number;
 }
