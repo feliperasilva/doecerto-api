@@ -37,7 +37,6 @@ async function main() {
   // ==================== ADMINS ====================
   console.log('👑 Creating admins...');
   const adminSeeds = [
-    { name: 'Super Admin', email: 'admin@sistema.com' },
     { name: 'Ana Reviewer', email: 'ana.reviewer@sistema.com' },
     { name: 'Bruno Auditor', email: 'bruno.auditor@sistema.com' },
     { name: 'Clara Supervisor', email: 'clara.supervisor@sistema.com' },
@@ -58,7 +57,6 @@ async function main() {
     admins.push({ userId: user.id, email: admin.email });
     console.log(`✅ Admin created: ${admin.email}`);
   }
-  console.log('');
 
   // ==================== DOADORES ====================
   console.log('👤 Creating donors...');
@@ -89,7 +87,6 @@ async function main() {
     donors.push({ userId: user.id, email: donor.email });
     console.log(`✅ Donor created: ${donor.email}`);
   }
-  console.log('');
 
   // ==================== ONGs ====================
   console.log('🏢 Creating ONGs...');
@@ -128,7 +125,9 @@ async function main() {
     });
 
     const verifier = admins[Math.floor(Math.random() * admins.length)]?.userId;
-    const nowMinusDays = new Date(Date.now() - Math.floor(Math.random() * 20 + 1) * 24 * 60 * 60 * 1000);
+    const nowMinusDays = new Date(
+      Date.now() - Math.floor(Math.random() * 20 + 1) * 24 * 60 * 60 * 1000,
+    );
 
     await prisma.ong.create({
       data: {
@@ -185,7 +184,6 @@ async function main() {
       bio: 'Promovemos saúde e bem-estar para comunidades carentes através de atendimento médico gratuito e programas de prevenção.',
       contactNumber: '(11) 98001-2345',
       websiteUrl: 'https://viverbem.org.br',
-      address: 'Av. Paulista, 1500 - Bela Vista, São Paulo - SP',
       avatarUrl: '/uploads/profiles/instituto-viver-bem.jpg',
       categoryIds: [categories[1].id, categories[3].id],
     },
@@ -194,7 +192,6 @@ async function main() {
       bio: 'Dedicados à educação de qualidade para crianças e jovens em situação de vulnerabilidade social, construindo um futuro melhor.',
       contactNumber: '(11) 98002-3456',
       websiteUrl: 'https://amigosdofuturo.org',
-      address: 'Rua da Educação, 250 - Centro, São Paulo - SP',
       avatarUrl: '/uploads/profiles/amigos-do-futuro.jpg',
       categoryIds: [categories[0].id, categories[7].id],
     },
@@ -203,7 +200,6 @@ async function main() {
       bio: 'Oferecemos capacitação profissional e desenvolvimento pessoal para adolescentes e adultos em busca de oportunidades.',
       contactNumber: '(11) 98005-6789',
       websiteUrl: 'https://institutocrescer.org',
-      address: 'Rua do Progresso, 450 - Vila Mariana, São Paulo - SP',
       avatarUrl: '/uploads/profiles/instituto-crescer.jpg',
       categoryIds: [categories[0].id, categories[11].id],
     },
@@ -212,7 +208,6 @@ async function main() {
       bio: 'Trabalhamos pela preservação ambiental e educação ecológica, semeando consciência para um planeta sustentável.',
       contactNumber: '(11) 98007-8901',
       websiteUrl: 'https://fundacaosemear.org.br',
-      address: 'Av. Verde, 1800 - Jardim Botânico, São Paulo - SP',
       avatarUrl: '/uploads/profiles/fundacao-semear.jpg',
       categoryIds: [categories[2].id, categories[0].id],
     },
@@ -221,7 +216,6 @@ async function main() {
       bio: 'Conectamos doadores e voluntários a famílias necessitadas, promovendo solidariedade e transformação social.',
       contactNumber: '(11) 98010-1234',
       websiteUrl: 'https://redesolidaria.org',
-      address: 'Rua da Solidariedade, 100 - Ipiranga, São Paulo - SP',
       avatarUrl: '/uploads/profiles/rede-solidaria.jpg',
       categoryIds: [categories[3].id, categories[8].id],
     },
@@ -230,7 +224,6 @@ async function main() {
       bio: 'Cuidamos de idosos em situação de abandono, oferecendo acolhimento, saúde e dignidade na terceira idade.',
       contactNumber: '(11) 98012-3456',
       websiteUrl: 'https://vidaplena.org',
-      address: 'Rua da Esperança, 320 - Mooca, São Paulo - SP',
       avatarUrl: '/uploads/profiles/vida-plena.jpg',
       categoryIds: [categories[1].id, categories[3].id],
     },
@@ -239,7 +232,6 @@ async function main() {
       bio: 'Proporcionamos alegria, educação e apoio emocional para crianças hospitalizadas e em tratamento de saúde.',
       contactNumber: '(11) 98014-5678',
       websiteUrl: 'https://criancafeliz.org',
-      address: 'Av. da Criança, 999 - Santana, São Paulo - SP',
       avatarUrl: '/uploads/profiles/crianca-feliz.jpg',
       categoryIds: [categories[1].id, categories[0].id, categories[4].id],
     },
@@ -259,7 +251,6 @@ async function main() {
   }
   console.log('');
 
-  // ==================== WISHLIST ITEMS ====================
   console.log('🧾 Creating wishlist items...');
   const wishlistSeeds = [
     { ong: ongs[1], description: 'Cestas básicas', quantity: 50 },
@@ -284,7 +275,6 @@ async function main() {
   console.log(`✅ ${wishlistSeeds.length} wishlist items created`);
   console.log('');
 
-  // ==================== DOAÇÕES ====================
   console.log('💝 Creating donations...');
   const verifiedOngs = ongs.filter((o) => o.status === VerificationStatus.verified);
 
@@ -318,7 +308,6 @@ async function main() {
   }
   console.log(`✅ ${donationRecords.length} donations created`);
   console.log('');
-
   // ==================== AVALIAÇÕES ====================
   console.log('⭐ Creating ratings...');
   const ratingsSeeds = [
