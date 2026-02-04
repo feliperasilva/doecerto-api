@@ -15,6 +15,7 @@ import { DonorProfileModule } from './modules/donor-profiles/donor-profiles.modu
 import { RatingsModule } from './modules/ratings/ratings.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { AddressesModule } from './modules/addresses/addresses.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
     RatingsModule,
     CatalogModule,
     CategoriesModule,
+    AddressesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
