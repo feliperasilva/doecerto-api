@@ -15,7 +15,6 @@ export class OngProfilesService {
     avatarUrl: true,
     contactNumber: true,
     websiteUrl: true,
-    address: true,
     // Relacionamento Many-to-Many com Categorias (Causas)
     categories: {
       select: {
@@ -28,7 +27,6 @@ export class OngProfilesService {
       select: {
         userId: true,
         cnpj: true,
-        // Campos de rating para exibição no perfil/vitrine
         averageRating: true,
         numberOfRatings: true,
         // Dados do Usuário associado (Nome/Email)
@@ -37,8 +35,12 @@ export class OngProfilesService {
             id: true,
             name: true,
             email: true,
+            createdAt: true,
+            updatedAt: true,
           },
         },
+        // Endereço pertence à ONG, não ao OngProfile
+        address: true,
       },
     },
   } as const;
@@ -106,15 +108,125 @@ export class OngProfilesService {
    * @param userId ID da ONG/Usuário
    */
   async findOne(userId: number) {
+    // Busca o perfil da ONG
     const profile = await this.prisma.ongProfile.findUnique({
       where: { ongId: userId },
       select: this.profileSelect,
     });
-
     if (!profile) {
       throw new NotFoundException('Perfil da ONG não encontrado.');
     }
 
-    return profile;
+    // Busca a quantidade de doações recebidas
+    const receivedDonations = await this.prisma.donation.count({
+      where: { ongId: userId },
+    });
+
+    // Busca o endereço detalhado, se existir
+    const address = await this.getOngAddress(profile.ong?.address);
+
+    return this.cleanProfileResponse(profile, receivedDonations, address);
+  }
+
+  /**
+   * Busca e normaliza o endereço da ONG
+   */
+  private async getOngAddress(rawAddress: any): Promise<{
+    street: string;
+    number: string;
+    complement: string | null;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    latitude: number | null;
+    longitude: number | null;
+  } | null> {
+    if (!rawAddress || typeof rawAddress !== 'object') return null;
+    // Se já está populado
+    if ('street' in rawAddress) {
+      const {
+        street = '',
+        number = '',
+        complement = null,
+        neighborhood = '',
+        city = '',
+        state = '',
+        zipCode = '',
+        country = '',
+        latitude = null,
+        longitude = null,
+      } = rawAddress;
+      return { street, number, complement, neighborhood, city, state, zipCode, country, latitude, longitude };
+    }
+    // Se só tem id, busca do banco
+    if ('id' in rawAddress && rawAddress.id) {
+      return await this.prisma.address.findUnique({
+        where: { id: rawAddress.id },
+        select: {
+          street: true,
+          number: true,
+          complement: true,
+          neighborhood: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          country: true,
+          latitude: true,
+          longitude: true,
+        },
+      });
+    }
+    return null;
+  }
+
+  /**
+   * Limpa e organiza a resposta do perfil da ONG para evitar dados duplicados e redundantes
+   */
+  private cleanProfileResponse(
+    profile: any,
+    receivedDonations = 0,
+    address?: {
+      street: string;
+      number: string;
+      complement: string | null;
+      neighborhood: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+      latitude: number | null;
+      longitude: number | null;
+    } | null
+  ) {
+    if (!profile) return null;
+    const {
+      ongId,
+      bio,
+      avatarUrl,
+      contactNumber,
+      websiteUrl,
+      categories,
+      ong,
+    } = profile;
+    return {
+      id: ongId,
+      name: ong?.user?.name || null,
+      email: ong?.user?.email || null,
+      avatarUrl: avatarUrl || null,
+      about: bio || null,
+      contactNumber: contactNumber || null,
+      websiteUrl: websiteUrl || null,
+      receivedDonations,
+      rating: {
+        average: ong?.averageRating || 0,
+        count: ong?.numberOfRatings || 0,
+      },
+      categories: categories?.map((c: any) => ({ id: c.id, name: c.name })) || [],
+      address: address ?? null,
+      createdAt: ong?.user?.createdAt || null,
+      updatedAt: ong?.user?.updatedAt || null,
+    };
   }
 }
