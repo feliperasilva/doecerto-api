@@ -5,6 +5,14 @@
 export type SortDirection = 'asc' | 'desc';
 
 /**
+ * Acessa valor de campo aninhado usando dot notation
+ * Ex: getNestedValue(obj, 'rating.average') retorna obj.rating.average
+ */
+function getNestedValue(obj: any, path: string): any {
+  return path.split('.').reduce((current, key) => current?.[key], obj);
+}
+
+/**
  * Compara dois valores considerando null/undefined
  * @returns número negativo se a < b, positivo se a > b, 0 se iguais
  */
@@ -29,10 +37,10 @@ function compareValues(a: any, b: any, direction: SortDirection): number {
 /**
  * Ordena itens do catálogo por múltiplos critérios:
  * 1. matchCount (descendente) - prioriza ONGs com mais categorias correspondentes
- * 2. orderByField (conforme direction) - critério específico da seção
- * 3. userId (ascendente) - tie-breaker determinístico
+ * 2. orderByField (conforme direction) - critério específico da seção (suporta dot notation)
+ * 3. id (ascendente) - tie-breaker determinístico
  */
-export function sortCatalogItems<T extends { matchCount: number; userId: number; [key: string]: any }>(
+export function sortCatalogItems<T extends { matchCount: number; id: number; [key: string]: any }>(
   items: T[],
   orderByField: string,
   orderByDirection: SortDirection,
@@ -43,13 +51,15 @@ export function sortCatalogItems<T extends { matchCount: number; userId: number;
       return b.matchCount - a.matchCount;
     }
 
-    // Critério 2: Campo específico da seção (averageRating, createdAt, etc)
-    const fieldComparison = compareValues(a[orderByField], b[orderByField], orderByDirection);
+    // Critério 2: Campo específico da seção (suporta paths aninhados como 'rating.average')
+    const aValue = getNestedValue(a, orderByField);
+    const bValue = getNestedValue(b, orderByField);
+    const fieldComparison = compareValues(aValue, bValue, orderByDirection);
     if (fieldComparison !== 0) {
       return fieldComparison;
     }
 
-    // Critério 3: userId como tie-breaker (sempre ascendente)
-    return a.userId - b.userId;
+    // Critério 3: id como tie-breaker (sempre ascendente)
+    return a.id - b.id;
   });
 }

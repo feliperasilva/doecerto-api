@@ -15,7 +15,6 @@ export class OngProfilesService {
     avatarUrl: true,
     contactNumber: true,
     websiteUrl: true,
-    address: true,
     // Relacionamento Many-to-Many com Categorias (Causas)
     categories: {
       select: {
@@ -39,6 +38,8 @@ export class OngProfilesService {
             email: true,
           },
         },
+        // Endereço pertence à ONG, não ao OngProfile
+        address: true,
       },
     },
   } as const;
