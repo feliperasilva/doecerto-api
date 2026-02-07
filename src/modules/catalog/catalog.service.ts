@@ -4,6 +4,9 @@ import { GetCatalogDto } from './dto/get-catalog.dto';
 import { CatalogSectionDto, NgoItemDto } from './dto/catalog-response.dto';
 import { sortCatalogItems } from 'src/common/utils/sorting.util';
 
+// Tipo interno que inclui matchCount para ordenação
+type NgoItemWithMatch = NgoItemDto & { matchCount: number };
+
 @Injectable()
 export class CatalogService {
   constructor(private readonly prisma: PrismaService) {}
@@ -20,7 +23,7 @@ export class CatalogService {
       return {
         title: `Resultados para "${filters.searchTerm}"`,
         type: 'search',
-        data: searchResults,
+        items: this.sanitizeForResponse(searchResults),
       };
     }
 
@@ -33,10 +36,10 @@ export class CatalogService {
     ]);
 
     return [
-      { title: 'Melhor Avaliadas', type: 'topRated', data: topRated },
-      { title: 'Mais Recentes', type: 'newest', data: newest },
-      { title: 'Mais Favoritas', type: 'topFavored', data: topFavored },
-      { title: 'Mais Antigas', type: 'oldest', data: oldest },
+      { title: 'Melhor Avaliadas', type: 'topRated', items: this.sanitizeForResponse(topRated) },
+      { title: 'Mais Recentes', type: 'newest', items: this.sanitizeForResponse(newest) },
+      { title: 'Mais Favoritas', type: 'topFavored', items: this.sanitizeForResponse(topFavored) },
+      { title: 'Mais Antigas', type: 'oldest', items: this.sanitizeForResponse(oldest) },
     ];
   }
 
@@ -45,7 +48,7 @@ export class CatalogService {
   /**
    * Busca no catálogo por termo (nome de ONG ou categoria)
    */
-  private async searchCatalog(filters: GetCatalogDto): Promise<NgoItemDto[]> {
+  private async searchCatalog(filters: GetCatalogDto): Promise<NgoItemWithMatch[]> {
     const { searchTerm, categoryIds } = filters;
     const take = filters.limit || 20;
     const skip = filters.offset || 0;
@@ -83,7 +86,7 @@ export class CatalogService {
       where: whereClause,
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true },
         },
         profile: {
           include: { categories: true },
@@ -98,29 +101,32 @@ export class CatalogService {
   }
 
   private async getTopRated(filters: GetCatalogDto) {
-    return this.findWithPriority(filters, 'averageRating', 'desc');
+    return this.findWithPriority(filters, 'averageRating', 'rating.average', 'desc');
   }
 
   private async getNewest(filters: GetCatalogDto) {
-    return this.findWithPriority(filters, 'createdAt', 'desc');
+    return this.findWithPriority(filters, 'createdAt', 'createdAt', 'desc');
   }
 
   private async getTopFavored(filters: GetCatalogDto) {
-    return this.findWithPriority(filters, 'numberOfRatings', 'desc');
+    return this.findWithPriority(filters, 'numberOfRatings', 'rating.count', 'desc');
   }
 
   private async getOldest(filters: GetCatalogDto) {
-    return this.findWithPriority(filters, 'createdAt', 'asc');
+    return this.findWithPriority(filters, 'createdAt', 'createdAt', 'asc');
   }
 
   /**
    * Lógica central de busca com ranking de prioridade por causas/categorias
+   * @param prismaField - Campo do modelo Prisma (banco de dados)
+   * @param dtoField - Campo do DTO (para re-ordenação em memória)
    */
   private async findWithPriority(
     filters: GetCatalogDto,
-    orderByField: string,
+    prismaField: string,
+    dtoField: string,
     orderByDirection: 'asc' | 'desc',
-  ): Promise<NgoItemDto[]> {
+  ): Promise<NgoItemWithMatch[]> {
     const { categoryIds } = filters;
     const take = filters.limit || 10;
     const skip = filters.offset || 0;
@@ -150,11 +156,11 @@ export class CatalogService {
           select: { id: true, name: true, email: true },
         },
         profile: {
-          include: { categories: true },
+          select: { categories: true, avatarUrl: true },
         },
       },
       orderBy: [
-        { [orderByField]: orderByDirection },
+        { [prismaField]: orderByDirection },
         { userId: 'asc' }, // Desempate determinístico usando PK
       ],
       // Paginação no DB apenas se não houver ranking de match
@@ -167,7 +173,7 @@ export class CatalogService {
 
     // 4. Re-ordenação por Prioridade + Paginação Manual (Se houver filtro)
     if (shouldFetchMore) {
-      mappedResults = sortCatalogItems(mappedResults, orderByField, orderByDirection);
+      mappedResults = sortCatalogItems(mappedResults, dtoField, orderByDirection);
       mappedResults = mappedResults.slice(skip, skip + take);
     }
 
@@ -176,32 +182,33 @@ export class CatalogService {
 
   /**
    * Transforma a entidade do Prisma para o DTO de Resposta
+   * Retorna também o matchCount internamente para ordenação
    */
-  private mapToDto(ong: any, filterCategoryIds?: number[]): NgoItemDto {
+  private mapToDto(ong: any, filterCategoryIds?: number[]): NgoItemWithMatch {
     const categories = ong.profile?.categories || [];
     
-    // Calcula quantos IDs batem com o filtro para o ranking
+    // Calcula quantos IDs batem com o filtro para o ranking (uso interno)
     const matchCount = filterCategoryIds?.length
       ? categories.filter((c) => filterCategoryIds.includes(c.id)).length
       : 0;
 
     return {
       id: ong.userId,
-      userId: ong.userId,
       name: ong.user?.name || 'ONG sem nome',
-      averageRating: ong.averageRating || 0,
-      numberOfRatings: ong.numberOfRatings || 0,
-      createdAt: ong.createdAt,
-      matchCount,
-      user: {
-        id: ong.user.id,
-        name: ong.user.name,
-        email: ong.user.email,
-      },
+      avatarUrl: ong.profile?.avatarUrl || null,
       categories: categories.map((c) => ({
         id: c.id,
         name: c.name,
       })),
+      createdAt: ong.createdAt,
+      matchCount, // Usado apenas para ordenação interna
     };
+  }
+
+  /**
+   * Remove campos internos antes de retornar ao cliente
+   */
+  private sanitizeForResponse(items: NgoItemWithMatch[]): NgoItemDto[] {
+    return items.map(({ matchCount, ...item }) => item);
   }
 }
