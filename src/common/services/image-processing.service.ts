@@ -35,6 +35,36 @@ export class ImageProcessingService {
   }
 
   /**
+   * Processa imagem para banner: redimensiona largura e comprime mantendo proporção
+   */
+  async processBannerImage(filePath: string, width: number = 1920): Promise<string> {
+    try {
+      const outputPath = filePath.replace(
+        /\.(jpg|jpeg|png|webp)$/i,
+        '-processed.jpg',
+      );
+
+      await sharp(filePath)
+        .resize(width, null, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .jpeg({
+          quality: 85,
+          progressive: true,
+        })
+        .toFile(outputPath);
+
+      await unlink(filePath);
+
+      return outputPath;
+    } catch (error) {
+      await unlink(filePath).catch(() => {});
+      throw new Error(`Failed to process banner image: ${error.message}`);
+    }
+  }
+
+  /**
    * Valida se a imagem está na proporção 1:1
    */
   async validateAspectRatio(filePath: string): Promise<boolean> {

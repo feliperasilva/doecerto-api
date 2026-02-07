@@ -95,6 +95,7 @@ model OngProfile {
   id            Int      @id @default(autoincrement())
   bio           String?  @db.VarChar(500)
   avatarUrl     String?  @db.VarChar(255)
+  bannerUrl     String?  @db.VarChar(255)
   contactNumber String?  @db.VarChar(20)
   websiteUrl    String?  @db.VarChar(255)
   categories    Category[]
