@@ -56,10 +56,11 @@ export class OngProfilesService {
    * Cria ou atualiza o perfil da ONG (Upsert).
    * @param userId ID do usuário extraído do JWT (segurança contra IDOR)
    * @param dto Dados de atualização vindos do Body
-   * @param avatarPath Caminho da imagem já processada pelo ImageProcessingService
+   * @param avatarPath Caminho da imagem de avatar já processada pelo ImageProcessingService
+   * @param bannerPath Caminho da imagem de banner já processada pelo ImageProcessingService
    */
-  async createOrUpdate(userId: number, dto: UpdateOngProfileDto, avatarPath?: string) {
-    const { categoryIds, bankAccount, ...profileData } = dto as any;
+  async createOrUpdate(userId: number, dto: UpdateOngProfileDto, avatarPath?: string, bannerPath?: string) {
+    const { categoryIds, ...profileData } = dto;
 
     // 1. Validar se a ONG (entidade principal) existe
     const ongExists = await this.prisma.ong.findUnique({
@@ -73,7 +74,9 @@ export class OngProfilesService {
     // 2. Preparar objeto de dados para atualização (Update)
     const updateData = {
       ...profileData,
+      // Só sobrescreve as URLs se novas imagens foram enviadas
       ...(avatarPath && { avatarUrl: avatarPath }),
+      ...(bannerPath && { bannerUrl: bannerPath }),
       categories: {
         set: categoryIds?.map((id) => ({ id })),
       },
@@ -84,6 +87,7 @@ export class OngProfilesService {
       ongId: userId,
       ...profileData,
       avatarUrl: avatarPath || null,
+      bannerUrl: bannerPath || null,
       categories: {
         connect: categoryIds?.map((id) => ({ id })),
       },
@@ -245,38 +249,5 @@ export class OngProfilesService {
       createdAt: ong?.user?.createdAt || null,
       updatedAt: ong?.user?.updatedAt || null,
     };
-  }
-
-  /**
-   * Atualiza apenas o banner do perfil da ONG.
-   * @param userId ID do usuário extraído do JWT
-   * @param bannerPath Caminho da imagem já processada
-   */
-  async updateBanner(userId: number, bannerPath: string) {
-    const ongExists = await this.prisma.ong.findUnique({
-      where: { userId },
-    });
-
-    if (!ongExists) {
-      throw new NotFoundException(`ONG com userId ${userId} não encontrada.`);
-    }
-
-    try {
-      return await this.prisma.ongProfile.upsert({
-        where: { ongId: userId },
-        create: {
-          ongId: userId,
-          bannerUrl: bannerPath,
-        },
-        update: {
-          bannerUrl: bannerPath,
-        },
-        select: this.profileSelect,
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(
-        'Erro ao atualizar o banner do perfil.',
-      );
-    }
   }
 }

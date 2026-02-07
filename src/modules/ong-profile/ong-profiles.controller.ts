@@ -5,17 +5,16 @@ import {
   Body, 
   Param, 
   UseInterceptors, 
-  UploadedFile, 
+  UploadedFiles, 
   ParseIntPipe,
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { OngProfilesService } from './ong-profiles.service';
 import { UpdateOngProfileDto } from './dto/update-ong-profile.dto';
 import { ImageProcessingService } from '../../common/services/image-processing.service';
-import { multerAvatarConfig } from '../../config/multer-avatar.config';
-import { multerBannerConfig } from '../../config/multer-banner.config';
+import { diskStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -33,59 +32,55 @@ export class OngProfilesController {
   @Post('me/profile')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ong')
-  @UseInterceptors(FileInterceptor('file', multerAvatarConfig)) // ✅ Configuração centralizada do Multer
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'avatar', maxCount: 1 },
+      { name: 'banner', maxCount: 1 },
+    ], {
+      storage: diskStorage({
+        destination: './uploads/profiles',
+        filename: (req, file, callback) => {
+          const { ext } = require('path').parse(file.originalname);
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    })
+  )
   async createOrUpdate(
     @Body() dto: UpdateOngProfileDto,
     @CurrentUser() user: User,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles() files?: { avatar?: Express.Multer.File[]; banner?: Express.Multer.File[] },
   ) {
     let avatarPath: string | undefined;
+    let bannerPath: string | undefined;
 
-    // Se um ficheiro for enviado, processamos através do serviço especializado
-    if (file) {
+    // Processar avatar se fornecido
+    if (files?.avatar?.[0]) {
       try {
-        // ✅ Processar imagem: corta 1:1, redimensiona para 512x512 e comprime via Sharp
         avatarPath = await this.imageProcessingService.processAvatarImage(
-          file.path,
+          files.avatar[0].path,
           512,
         );
       } catch (error) {
         throw new BadRequestException('Falha ao processar imagem do avatar');
       }
     }
-    
-    // ✅ Envia para o service o ID da ONG do JWT, o DTO (incluindo categoryIds) e o caminho da imagem
-    return this.ongProfilesService.createOrUpdate(user.id, dto, avatarPath);
-  }
 
-  /**
-   * Upload de banner da ONG (imagem maior para cabeçalho do perfil).
-   */
-  @Post('me/profile/banner')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ong')
-  @UseInterceptors(FileInterceptor('file', multerBannerConfig))
-  async uploadBanner(
-    @CurrentUser() user: User,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    if (!file) {
-      throw new BadRequestException('Nenhum arquivo foi enviado');
+    // Processar banner se fornecido
+    if (files?.banner?.[0]) {
+      try {
+        bannerPath = await this.imageProcessingService.processBannerImage(
+          files.banner[0].path,
+          1920,
+        );
+      } catch (error) {
+        throw new BadRequestException('Falha ao processar imagem do banner');
+      }
     }
 
-    let bannerPath: string;
-
-    try {
-      // Processar imagem: mantém proporção, redimensiona largura para 1920px e comprime
-      bannerPath = await this.imageProcessingService.processBannerImage(
-        file.path,
-        1920,
-      );
-    } catch (error) {
-      throw new BadRequestException('Falha ao processar imagem do banner');
-    }
-
-    return this.ongProfilesService.updateBanner(user.id, bannerPath);
+    return this.ongProfilesService.createOrUpdate(user.id, dto, avatarPath, bannerPath);
   }
 
   /**
