@@ -17,13 +17,14 @@ export class OngsBankAccountService {
 
   async create(createOngsBankAccountDto: CreateOngsBankAccountDto, ongId: number) {
     const ongProfileId = await this.getOngProfileIdByOngId(ongId);
-    const { bankName, agencyNumber, accountNumber, accountType } = createOngsBankAccountDto;
+    const { bankName, agencyNumber, accountNumber, accountType, pixKey } = createOngsBankAccountDto;
     return await this.prisma.ongBankAccount.create({
       data: {
         bankName,
         agencyNumber,
         accountNumber,
         accountType,
+        pixKey,
         ongProfile: {
           connect: { id: ongProfileId },
         },
@@ -60,6 +61,7 @@ export class OngsBankAccountService {
       agencyNumber: account.agencyNumber,
       accountNumber: account.accountNumber,
       accountType: account.accountType,
+      pixKey: account.pixKey,
     }));
   }
 

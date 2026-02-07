@@ -18,4 +18,7 @@ export class CreateOngsBankAccountDto {
     @IsString()
     @IsNotEmpty()
     accountType: string;
+
+    @IsString()
+    pixKey?: string;
 }
