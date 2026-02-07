@@ -15,6 +15,7 @@ import { OngProfilesService } from './ong-profiles.service';
 import { UpdateOngProfileDto } from './dto/update-ong-profile.dto';
 import { ImageProcessingService } from '../../common/services/image-processing.service';
 import { multerAvatarConfig } from '../../config/multer-avatar.config';
+import { multerBannerConfig } from '../../config/multer-banner.config';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -55,6 +56,36 @@ export class OngProfilesController {
     
     // ✅ Envia para o service o ID da ONG do JWT, o DTO (incluindo categoryIds) e o caminho da imagem
     return this.ongProfilesService.createOrUpdate(user.id, dto, avatarPath);
+  }
+
+  /**
+   * Upload de banner da ONG (imagem maior para cabeçalho do perfil).
+   */
+  @Post('me/profile/banner')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ong')
+  @UseInterceptors(FileInterceptor('file', multerBannerConfig))
+  async uploadBanner(
+    @CurrentUser() user: User,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo foi enviado');
+    }
+
+    let bannerPath: string;
+
+    try {
+      // Processar imagem: mantém proporção, redimensiona largura para 1920px e comprime
+      bannerPath = await this.imageProcessingService.processBannerImage(
+        file.path,
+        1920,
+      );
+    } catch (error) {
+      throw new BadRequestException('Falha ao processar imagem do banner');
+    }
+
+    return this.ongProfilesService.updateBanner(user.id, bannerPath);
   }
 
   /**

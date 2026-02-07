@@ -13,9 +13,9 @@ export class OngProfilesService {
     ongId: true,
     bio: true,
     avatarUrl: true,
+    bannerUrl: true,
     contactNumber: true,
     websiteUrl: true,
-    address: true,
     // Relacionamento Many-to-Many com Categorias (Causas)
     categories: {
       select: {
@@ -116,5 +116,38 @@ export class OngProfilesService {
     }
 
     return profile;
+  }
+
+  /**
+   * Atualiza apenas o banner do perfil da ONG.
+   * @param userId ID do usuário extraído do JWT
+   * @param bannerPath Caminho da imagem já processada
+   */
+  async updateBanner(userId: number, bannerPath: string) {
+    const ongExists = await this.prisma.ong.findUnique({
+      where: { userId },
+    });
+
+    if (!ongExists) {
+      throw new NotFoundException(`ONG com userId ${userId} não encontrada.`);
+    }
+
+    try {
+      return await this.prisma.ongProfile.upsert({
+        where: { ongId: userId },
+        create: {
+          ongId: userId,
+          bannerUrl: bannerPath,
+        },
+        update: {
+          bannerUrl: bannerPath,
+        },
+        select: this.profileSelect,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Erro ao atualizar o banner do perfil.',
+      );
+    }
   }
 }
