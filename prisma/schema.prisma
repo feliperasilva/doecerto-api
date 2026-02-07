@@ -98,6 +98,7 @@ model OngProfile {
   contactNumber String?  @db.VarChar(20)
   websiteUrl    String?  @db.VarChar(255)
   categories    Category[]
+  bankAccount   OngBankAccount?
 
   
   createdAt     DateTime @default(now())
@@ -117,6 +118,22 @@ model Admin {
   verificationsPerformed Ong[] @relation("OngVerifications")
 
   @@map("admins")
+}
+
+model OngBankAccount {
+  id            Int      @id @default(autoincrement())
+  bankName      String   @db.VarChar(100)
+  agencyNumber  String   @db.VarChar(20)
+  accountNumber String   @db.VarChar(20)
+  accountType   String   @db.VarChar(20) 
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ongProfileId  Int      @unique
+  ongProfile    OngProfile @relation(fields: [ongProfileId], references: [id], onDelete: Cascade)
+
+  @@map("ong_bank_accounts")
 }
 
 model Address {

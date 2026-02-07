@@ -16,6 +16,7 @@ import { RatingsModule } from './modules/ratings/ratings.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
+import { OngsBankAccountModule } from './ongs-bank-account/ongs-bank-account.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { AddressesModule } from './modules/addresses/addresses.module';
     CatalogModule,
     CategoriesModule,
     AddressesModule,
+    OngsBankAccountModule,
   ],
   controllers: [AppController],
   providers: [AppService],
