@@ -1,9 +1,14 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateOngProfileDto } from './dto/update-ong-profile.dto';
+import { OngsBankAccountService } from 'src/ongs-bank-account/ongs-bank-account.service';
 
 @Injectable()
 export class OngProfilesService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ongsBankAccountService: OngsBankAccountService,
+  ) {}
   /**
    * Centralizamos o select para garantir consistência em todos os métodos de busca.
    * Inclui dados do Perfil, Categorias, ONG (CNPJ/Ratings) e Usuário Base.
@@ -45,7 +50,6 @@ export class OngProfilesService {
     },
   } as const;
 
-  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Cria ou atualiza o perfil da ONG (Upsert).
@@ -54,7 +58,7 @@ export class OngProfilesService {
    * @param avatarPath Caminho da imagem já processada pelo ImageProcessingService
    */
   async createOrUpdate(userId: number, dto: UpdateOngProfileDto, avatarPath?: string) {
-    const { categoryIds, ...profileData } = dto;
+    const { categoryIds, bankAccount, ...profileData } = dto as any;
 
     // 1. Validar se a ONG (entidade principal) existe
     const ongExists = await this.prisma.ong.findUnique({
@@ -66,13 +70,10 @@ export class OngProfilesService {
     }
 
     // 2. Preparar objeto de dados para atualização (Update)
-    // O Prisma 6 permite usar 'set' para sincronizar relações Many-to-Many de forma atômica
     const updateData = {
       ...profileData,
-      // Só sobrescreve a URL do avatar se uma nova imagem foi enviada
       ...(avatarPath && { avatarUrl: avatarPath }),
       categories: {
-        // 'set' remove o que não está na lista e adiciona o que é novo
         set: categoryIds?.map((id) => ({ id })),
       },
     };
@@ -89,14 +90,20 @@ export class OngProfilesService {
 
     try {
       // 4. Executa a operação de Upsert (Update or Insert)
-      return await this.prisma.ongProfile.upsert({
+      const profile = await this.prisma.ongProfile.upsert({
         where: { ongId: userId },
         create: createData,
         update: updateData,
-        select: this.profileSelect, // Retorna o perfil completo com as novas categorias
+        select: this.profileSelect,
       });
+
+      // 5. Se vier dados de conta bancária, faz create/update da conta bancária
+      if (bankAccount) {
+        await this.ongsBankAccountService.create(bankAccount, userId);
+      }
+
+      return profile;
     } catch (error) {
-      // Captura erros de integridade, como IDs de categorias que não existem no banco
       throw new InternalServerErrorException(
         'Erro ao processar a atualização do perfil. Verifique se os dados estão corretos.',
       );
@@ -125,7 +132,14 @@ export class OngProfilesService {
     // Busca o endereço detalhado, se existir
     const address = await this.getOngAddress(profile.ong?.address);
 
-    return this.cleanProfileResponse(profile, receivedDonations, address);
+    // Busca dados públicos da conta bancária de forma assíncrona
+    const bankAccounts = await this.ongsBankAccountService.getPublicBankAccounts(userId);
+
+    // Retorna perfil + dados bancários
+    return {
+      ...this.cleanProfileResponse(profile, receivedDonations, address),
+      bankAccounts,
+    };
   }
 
   /**
