@@ -134,11 +134,13 @@ export class OngProfilesService {
 
     // Busca dados públicos da conta bancária de forma assíncrona
     const bankAccounts = await this.ongsBankAccountService.getPublicBankAccounts(userId);
-
+    // Se houver apenas uma conta, adiciona pixKey no root do perfil para facilitar acesso rápido
+    const pixKey = Array.isArray(bankAccounts) && bankAccounts.length === 1 ? bankAccounts[0].pixKey : undefined;
     // Retorna perfil + dados bancários
     return {
       ...this.cleanProfileResponse(profile, receivedDonations, address),
       bankAccounts,
+      pixKey,
     };
   }
 

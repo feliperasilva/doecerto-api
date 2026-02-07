@@ -20,4 +20,8 @@ export class UpdateOngsBankAccountDto extends PartialType(CreateOngsBankAccountD
     @IsOptional()
     @IsString()
     accountType?: string;
+
+    @IsOptional()
+    @IsString()
+    pixKey?: string;
 }

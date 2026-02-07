@@ -125,7 +125,8 @@ model OngBankAccount {
   bankName      String   @db.VarChar(100)
   agencyNumber  String   @db.VarChar(20)
   accountNumber String   @db.VarChar(20)
-  accountType   String   @db.VarChar(20) 
+  accountType   String   @db.VarChar(20)
+  pixKey        String?  @db.VarChar(255) 
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
