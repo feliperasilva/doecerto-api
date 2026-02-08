@@ -38,9 +38,13 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const { accessToken } = await this.authService.signIn(loginDto);
-    this.setTokenCookie(response, accessToken);
-    return { message: 'Login successful' };
+    const authData = await this.authService.signIn(loginDto);
+    this.setTokenCookie(response, authData.accessToken);
+    return {
+      message: 'Login successful',
+      accessToken: authData.accessToken,
+      user: authData.user
+    };
   }
 
   @Post('register/donor')
@@ -49,10 +53,14 @@ export class AuthController {
     @Body() registerDonorDto: RegisterDonorDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const { accessToken } =
-      await this.authService.signUpDonor(registerDonorDto);
-    this.setTokenCookie(response, accessToken);
-    return { message: 'Donor registered successfully' };
+    const authData = await this.authService.signUpDonor(registerDonorDto);
+    this.setTokenCookie(response, authData.accessToken);
+    return {
+      message: 'Donor registered successfully',
+      accessToken: authData.accessToken,
+      user: authData.user,
+      profile: authData.profile
+    };
   }
 
   @Post('register/ong')
@@ -61,9 +69,14 @@ export class AuthController {
     @Body() registerOngDto: RegisterOngDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const { accessToken } = await this.authService.signUpOng(registerOngDto);
-    this.setTokenCookie(response, accessToken);
-    return { message: 'ONG registered successfully' };
+    const authData = await this.authService.signUpOng(registerOngDto);
+    this.setTokenCookie(response, authData.accessToken);
+    return {
+      message: 'ONG registered successfully',
+      accessToken: authData.accessToken,
+      user: authData.user,
+      profile: authData.profile
+    };
   }
 
   @UseGuards(JwtAuthGuard)
