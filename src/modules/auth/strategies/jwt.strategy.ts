@@ -12,10 +12,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {
-    const jwtSecret = ConfigService.prototype.constructor;
     super({
-      // ✅ Forma simples: apenas cookie
       jwtFromRequest: (req: Request) => {
+        // 1. Tenta pegar do header Authorization (Bearer)
+        const authHeader = req?.headers?.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          return authHeader.replace('Bearer ', '');
+        }
+        // 2. Fallback: tenta pegar dos cookies
         if (req?.cookies) {
           return req.cookies['Authorization'] || req.cookies['access_token'] || null;
         }
@@ -27,22 +31,19 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: {
-    sub: string;
+    sub: number | string;
     email: string;
     role: string;
   }): Promise<Omit<User, 'password'>> {
-    const user = await this.usersService.findById(payload.sub);
+    // Garante que sub é number
+    const userId = typeof payload.sub === 'string' ? parseInt(payload.sub, 10) : payload.sub;
+    const user = await this.usersService.findById(String(userId));
 
     if (!user) {
       throw new UnauthorizedException('Token inválido ou usuário não encontrado');
     }
 
-    console.log('🔍 JWT Strategy - Usuário validado:', {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
+    // Remove senha do retorno
     const { password, ...result } = user;
     return result;
   }

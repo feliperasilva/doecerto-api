@@ -7,21 +7,21 @@ import {
   Param,
   Delete,
   ParseIntPipe,
-  UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { AdminsService } from './admins.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
-import { Roles } from 'src/modules/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/modules/auth/decorators/current-user.decorator';
 import type { User } from 'generated/prisma';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
-@Controller('admins')
+@Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin') // Todas as rotas são protegidas e só admins podem acessar
+@Roles('admin')
 export class AdminsController {
   constructor(private readonly adminsService: AdminsService) {}
 
@@ -33,10 +33,20 @@ export class AdminsController {
   }
 
   // Deletar admin
-  @Delete(':adminId')
+  @Delete('admins/:adminId')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('adminId', ParseIntPipe) adminId: number) {
     return this.adminsService.deleteAdmin(adminId);
+  }
+
+  @Get('admins/:adminId')
+  getAdminById(@Param('adminId', ParseIntPipe) adminId: number) {
+    return this.adminsService.findAdminById(adminId);
+  }
+
+  @Get('admins/me')
+  getMyAdmin(@CurrentUser() user: User) {
+    return this.adminsService.findAdminById(user.id);
   }
 
   // Listar ONGs pendentes de verificação
@@ -79,13 +89,13 @@ export class AdminsController {
   }
 
   // Ver estatísticas do próprio admin
-  @Get('me/stats')
+  @Get('admins/me/stats')
   getMyStats(@CurrentUser() user: User) {
     return this.adminsService.getAdminStats(user.id);
   }
 
   // Ver estatísticas de outro admin (admin pode ver de qualquer admin)
-  @Get(':adminId/stats')
+  @Get('admins/:adminId/stats')
   getAdminStats(@Param('adminId', ParseIntPipe) adminId: number) {
     return this.adminsService.getAdminStats(adminId);
   }

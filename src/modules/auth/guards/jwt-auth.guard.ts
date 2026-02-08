@@ -8,18 +8,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 		const ctx = context.switchToHttp();
 		const request = ctx.getRequest();
 
-		// 1. Tenta pegar o token do cookie (web)
-		if (request.cookies && request.cookies['jwt']) {
-			request.headers.authorization = `Bearer ${request.cookies['jwt']}`;
-			return request;
-		}
-
-		// 2. Tenta pegar do header Authorization (mobile)
+		// 1. Tenta pegar do header Authorization (Bearer)
 		const authHeader = request.headers['authorization'] || request.headers['Authorization'];
 		if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
 			return request;
 		}
 
-		throw new UnauthorizedException('JWT token not found in cookie or Authorization header');
+		// 2. Fallback: tenta pegar dos cookies (jwt, access_token, Authorization)
+		if (request.cookies) {
+			const cookieToken = request.cookies['jwt'] || request.cookies['access_token'] || request.cookies['Authorization'];
+			if (cookieToken) {
+				request.headers.authorization = `Bearer ${cookieToken}`;
+				return request;
+			}
+		}
+
+		throw new UnauthorizedException('JWT token not found in Authorization header or cookies');
 	}
 }
