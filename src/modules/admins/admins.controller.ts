@@ -32,21 +32,36 @@ export class AdminsController {
     return this.adminsService.createAdmin(createAdminDto);
   }
 
-  // Deletar admin
-  @Delete('admins/:adminId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('adminId', ParseIntPipe) adminId: number) {
-    return this.adminsService.deleteAdmin(adminId);
+  // ✅ CORREÇÃO: Rotas específicas (/me) VÊM ANTES das rotas genéricas (/:id)
+  // Ver dados do admin logado
+  @Get('admins/me')
+  getMyAdmin(@CurrentUser() user: User) {
+    return this.adminsService.findAdminById(user.id);
   }
 
+  // Ver estatísticas do próprio admin
+  @Get('admins/me/stats')
+  getMyStats(@CurrentUser() user: User) {
+    return this.adminsService.getAdminStats(user.id);
+  }
+
+  // ✅ Agora sim, rota genérica vem depois
   @Get('admins/:adminId')
   getAdminById(@Param('adminId', ParseIntPipe) adminId: number) {
     return this.adminsService.findAdminById(adminId);
   }
 
-  @Get('admins/me')
-  getMyAdmin(@CurrentUser() user: User) {
-    return this.adminsService.findAdminById(user.id);
+  // Ver estatísticas de outro admin (admin pode ver de qualquer admin)
+  @Get('admins/:adminId/stats')
+  getAdminStats(@Param('adminId', ParseIntPipe) adminId: number) {
+    return this.adminsService.getAdminStats(adminId);
+  }
+
+  // Deletar admin
+  @Delete('admins/:adminId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('adminId', ParseIntPipe) adminId: number) {
+    return this.adminsService.deleteAdmin(adminId);
   }
 
   // Listar ONGs pendentes de verificação
@@ -86,17 +101,5 @@ export class AdminsController {
     @CurrentUser() user: User,
   ) {
     return this.adminsService.rejectOng(ongId, user.id, reason);
-  }
-
-  // Ver estatísticas do próprio admin
-  @Get('admins/me/stats')
-  getMyStats(@CurrentUser() user: User) {
-    return this.adminsService.getAdminStats(user.id);
-  }
-
-  // Ver estatísticas de outro admin (admin pode ver de qualquer admin)
-  @Get('admins/:adminId/stats')
-  getAdminStats(@Param('adminId', ParseIntPipe) adminId: number) {
-    return this.adminsService.getAdminStats(adminId);
   }
 }
