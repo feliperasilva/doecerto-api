@@ -38,6 +38,7 @@ async function main() {
   console.log('👑 Creating admins...');
   const adminSeeds = [
     { name: 'Ana Reviewer', email: 'ana.reviewer@sistema.com' },
+    { name: 'DoeCerto Admin', email: 'admin@doecerto.com' },
     { name: 'Bruno Auditor', email: 'bruno.auditor@sistema.com' },
     { name: 'Clara Supervisor', email: 'clara.supervisor@sistema.com' },
     { name: 'Diego Verifier', email: 'diego.verifier@sistema.com' },
