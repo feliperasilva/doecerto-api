@@ -6,7 +6,7 @@ import {
   IsNumber, 
   MaxLength 
 } from 'class-validator';
-
+import { CreateOngsBankAccountDto } from '../../ongs-bank-account/dto/create-ongs-bank-account.dto';
 /**
  * DTO para atualização de perfil da ONG.
  * Como o perfil já nasce com a ONG, usamos este DTO para complementar
@@ -40,4 +40,10 @@ export class UpdateOngProfileDto {
   @IsArray({ message: 'categoryIds deve ser um array' })
   @IsNumber({}, { each: true, message: 'Cada ID de categoria deve ser um número' })
   categoryIds?: number[];
+
+  /**
+   * Dados da conta bancária para criação ou atualização.
+   */
+  @IsOptional()
+  bankAccount?: CreateOngsBankAccountDto;
 }

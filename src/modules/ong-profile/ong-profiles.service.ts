@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateOngProfileDto } from './dto/update-ong-profile.dto';
-import { OngsBankAccountService } from 'src/ongs-bank-account/ongs-bank-account.service';
+import { OngsBankAccountService } from 'src/modules/ongs-bank-account/ongs-bank-account.service';
 
 @Injectable()
 export class OngProfilesService {
@@ -60,7 +60,7 @@ export class OngProfilesService {
    * @param bannerPath Caminho da imagem de banner já processada pelo ImageProcessingService
    */
   async createOrUpdate(userId: number, dto: UpdateOngProfileDto, avatarPath?: string, bannerPath?: string) {
-    const { categoryIds, ...profileData } = dto;
+    const { categoryIds, bankAccount, ...profileData } = dto;
 
     // 1. Validar se a ONG (entidade principal) existe
     const ongExists = await this.prisma.ong.findUnique({
